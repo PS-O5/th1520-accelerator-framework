@@ -1,11 +1,11 @@
 # RISC-V C910 Accelerator Development Platform
 
-A minimal, bare-metal development framework for the T-Head C910 (RISC-V 64-bit) processor, running FreeRTOS. This project serves as a baseline for developing and testing custom hardware accelerators (RoCC/MMIO).
+A minimal, bare-metal development framework for the T-Head C910 (RISC-V 64-bit) processor, running FreeRTOS. This project serves as a baseline for developing and testing custom hardware accelerators (RoCC/MMIO). This project explores a full-stack **Host–Accelerator architecture** for accelerating equivariant neural networks (MACE)
 
 ## 📊 Project Status
 
 This repository implements a custom Verilog-based Neural Processing Unit (NPU).
-Development is ongoing and tracked at a module and feature level.
+Development is ongoing and tracked at a module and feature level. Progress is tracked using GitHub Milestones. High-level status is summarized below.
 
 ### Overall Progress
 - [x] High-level architecture definition
