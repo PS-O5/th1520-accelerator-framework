@@ -2,6 +2,22 @@
 
 A minimal, bare-metal development framework for the T-Head C910 (RISC-V 64-bit) processor, running FreeRTOS. This project serves as a baseline for developing and testing custom hardware accelerators (RoCC/MMIO).
 
+## 📊 Project Status
+
+This repository implements a custom Verilog-based Neural Processing Unit (NPU).
+Development is ongoing and tracked at a module and feature level.
+
+### Overall Progress
+- [x] High-level architecture definition
+- [x] Instruction set specification
+- [ ] Compute core (MAC array)
+- [ ] Memory subsystem
+- [ ] DMA / data movement engine
+- [ ] Control & scheduler
+- [ ] Verification (testbenches)
+- [ ] FPGA prototype
+- [ ] Documentation & examples
+
 ## Project Structure
 
 ```text
@@ -35,3 +51,5 @@ Memory Map: Edit platform/c910/linker.ld to match your target RAM layout.
 Peripherals: UART and Timer addresses are defined in platform/c910/.
 
 Vector Extensions: The C910 uses RVV 0.7.1. Ensure ARCH_FLAGS in Makefile matches your hardware support.
+
+
