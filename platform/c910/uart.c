@@ -1,5 +1,5 @@
 #include "uart.h"
-#include "config.h"
+#include "platform_conf.h"
 
 /* UART register bit definitions */
 #define USR_UART_BUSY           0x01
@@ -30,9 +30,12 @@
 #define	CK_LSR_DR               0x01
 #define CK_LSR_TRANS_EMPTY      0x20
 
+t_ck_uart_device g_console_uart;
 
+
+#if 0   //Failsafe, byach!
 void ck_uart_set_baudrate(p_ck_uart_device uart_device, uint32_t baudrate)
-{ /* {{{ ck_uart_set_baudrate */
+{ /* {{{ ck_uart_set_baudrate (Not required in TH1520 as we TRUST U-Boot xD) 
     uint32_t baud_div;
     uint32_t *addr = uart_device->register_map;
     baud_div = (APB_FREQ/baudrate) >> 4;
@@ -41,10 +44,11 @@ void ck_uart_set_baudrate(p_ck_uart_device uart_device, uint32_t baudrate)
     *(reg8_t*)(addr+CK_UART_DLL) = (baud_div & 0xFF);
     *(reg8_t*)(addr+CK_UART_DLH) = ((baud_div >> 8) & 0xFF);
     *(reg8_t*)(addr+CK_UART_LCR) &= (~LCR_SET_DLAB);
-} /* }}} */
+    }}} */
+}
 
 void ck_uart_set_parity(p_ck_uart_device uart_device, t_ck_uart_parity parity)
-{ /* {{{ ck_uart_set_parity */
+{ /* {{{ ck_uart_set_parity
     uart_device->parity = parity;
     switch (parity)
     {
@@ -62,10 +66,11 @@ void ck_uart_set_parity(p_ck_uart_device uart_device, t_ck_uart_parity parity)
         default:
             break;
     }
-} /* }}} */
+}}} */
+}
 
 void ck_uart_set_wordsize(p_ck_uart_device uart_device, t_ck_uart_wordsize wordsize)
-{ /* {{{ ck_uart_set_wordsize */
+{ /* {{{ ck_uart_set_wordsize
     uart_device->wordsize = wordsize;
     switch (wordsize)
     {
@@ -86,10 +91,11 @@ void ck_uart_set_wordsize(p_ck_uart_device uart_device, t_ck_uart_wordsize words
         default:
             break;
     }			
-} /* }}} */
+}}} */
+}
 
 void ck_uart_set_stopbit(p_ck_uart_device uart_device, t_ck_uart_stopbit stopbit)
-{ /* {{{ ck_uart_set_stopbit */
+{ /* {{{ ck_uart_set_stopbit
     uart_device->stopbit = stopbit;
     switch(stopbit)
     {
@@ -102,7 +108,11 @@ void ck_uart_set_stopbit(p_ck_uart_device uart_device, t_ck_uart_stopbit stopbit
         default:
             break;
     }
-} /* }}} */
+}}} */
+}
+
+#endif
+
 
 
 void ck_uart_set_rxmode(p_ck_uart_device uart_device, t_ck_uart_mode rxmode)
@@ -110,6 +120,8 @@ void ck_uart_set_rxmode(p_ck_uart_device uart_device, t_ck_uart_mode rxmode)
     uart_device->rxmode = rxmode;
 
 } /* }}} */
+
+
 
 void ck_uart_set_txmode(p_ck_uart_device uart_device, t_ck_uart_mode txmode)
 { /* {{{ ck_uart_set_txmode */
@@ -128,13 +140,11 @@ uint32_t ck_uart_open(p_ck_uart_device uart_device, uint32_t id)
     if (id == 0)
     {
         uart_device->uart_id = 0;
-        uart_device->register_map = (uint32_t*)UART0_BASE_ADDR;
+        // Ensure UART0_BASE_ADDR is 0xFFE7014000UL in config.h
+        uart_device->register_map = (uint32_t*)UART0_BASE_ADDR; 
         return 0;
     }
-    else
-    {
-        return 1;
-    }
+    return 1;
 }
 
 /*
@@ -145,14 +155,28 @@ uint32_t ck_uart_open(p_ck_uart_device uart_device, uint32_t id)
  */
 uint32_t ck_uart_init(p_ck_uart_device uart_device, p_ck_uart_cfig uart_cfig)
 {
+    
+    //Shush the compiler for warning
+    (void)uart_cfig;
+
     if (uart_device->uart_id == 0xFFFF)
         return 1;
-    ck_uart_set_baudrate(uart_device, uart_cfig->baudrate);
-    ck_uart_set_parity(uart_device, uart_cfig->parity);
-    ck_uart_set_wordsize(uart_device, uart_cfig->wordsize);
-    ck_uart_set_stopbit(uart_device, uart_cfig->stopbit);
-    ck_uart_set_rxmode(uart_device, uart_cfig->rxmode);
-    ck_uart_set_txmode(uart_device, uart_cfig->txmode);
+
+    /* CRITICAL FIX FOR LICHEE PI 4A:
+       Do NOT reset Baudrate or Line Control. U-Boot has already done this.
+       Resetting it with a potentially wrong APB_FREQ will kill the console.
+    */
+
+    // ck_uart_set_baudrate(uart_device, uart_cfig->baudrate); <--- DISABLE
+    // ck_uart_set_parity(uart_device, uart_cfig->parity);     <--- DISABLE
+    // ck_uart_set_wordsize(uart_device, uart_cfig->wordsize); <--- DISABLE
+    // ck_uart_set_stopbit(uart_device, uart_cfig->stopbit);   <--- DISABLE
+
+    /* Just enable the FIFO to be safe */
+    // FCR is usually offset 2. 
+    // Pointer math: register_map (uint32) + 2 = offset 8 bytes. Correct.
+    *(reg32_t*)(uart_device->register_map + 2) = 0x01; // Enable FIFO
+
     return 0;
 }
 
@@ -177,14 +201,22 @@ uint32_t ck_uart_close(p_ck_uart_device uart_device)
  */
 uint32_t ck_uart_putc(p_ck_uart_device uart_device, uint8_t c)
 {
-    if (uart_device->txmode == DISABLE)
-        return 1;
-    // wait until uart transmit buffer is empty
-    while (!((*(reg8_t*)(uart_device->register_map+CK_UART_LSR)) & CK_LSR_TRANS_EMPTY));
+    // Wait until LSR (Line Status Register) says THRE (Tx Holding Register Empty)
+    // CK_UART_LSR is usually 5. 
+    // Pointer math: register_map + 5 = offset 20 bytes (0x14). Correct for TH1520.
+    
+    volatile uint32_t *lsr_reg = (volatile uint32_t*)(uart_device->register_map + 5); // 5 = LSR
+    volatile uint32_t *thr_reg = (volatile uint32_t*)(uart_device->register_map + 0); // 0 = THR
 
-    *(reg8_t*)(uart_device->register_map+CK_UART_THR) = c;
+    // Bit 0x20 is usually THRE (Transmit Holding Register Empty)
+    while (!((*lsr_reg) & 0x20));
+
+    // Write the character
+    *thr_reg = c;
+    
     return 0;
 }
+
 
 /*
  * @brief  check uart device's status, busy or idle
@@ -193,11 +225,41 @@ uint32_t ck_uart_putc(p_ck_uart_device uart_device, uint8_t c)
  */
 uint32_t ck_uart_status(p_ck_uart_device uart_device)
 {
-    uint8_t uart_lsr;
+    uint32_t uart_lsr;
+    volatile uint32_t *lsr_reg = (volatile uint32_t*)(uart_device->register_map + 5);
 
-//    uart_lsr = *(reg8_t*)(uart_device->register_map+CK_UART_LSR);
-    if (uart_lsr & CK_LSR_TEMT)
-        return 0;
+    uart_lsr = *lsr_reg; 
+
+    // Check TEMT (Transmitter Empty) or THRE
+    if (uart_lsr & 0x40) // TEMT
+        return 0; // Idle
     else
-        return 1;
+        return 1; // Busy
+}
+
+
+//Pretty printer, I guess? Easy printer?
+
+void console_init(void) {
+    p_ck_uart_cfig config = 0; // Config not used in our patched init
+
+    // Open UART ID 0 (Sets base address)
+    ck_uart_open(&g_console_uart, 0);
+
+    // Initialize (Enables FIFO)
+    ck_uart_init(&g_console_uart, config);
+}
+
+void uart_puts(const char *s) {
+    while (*s) {
+        // Handle newlines
+        if (*s == '\n') {
+            ck_uart_putc(&g_console_uart, '\r');
+        }
+
+        // Use your existing function!
+        ck_uart_putc(&g_console_uart, (uint8_t)*s);
+
+        s++;
+    }
 }

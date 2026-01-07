@@ -1,49 +1,63 @@
 OUTPUT_ARCH( "riscv" )
-ENTRY( _start )
+ENTRY( _start )  /* Ensure your startup.S uses ".globl _start" */
 
 MEMORY
 {
-  /* Adjust ORIGIN and LENGTH to match your hardware/simulator */
-  RAM (rwx) : ORIGIN = 0x80000000, LENGTH = 128M
+  /* * TH1520 RAM Layout for U-Boot Payloads:
+   * 0x00000000 - 0x001FFFFF : OpenSBI (DO NOT TOUCH)
+   * 0x00200000 - ...        : Your Application (Safe Zone)
+   */
+  DRAM (xrw) : ORIGIN = 0x00200000, LENGTH = 128M 
 }
 
 SECTIONS
 {
+  /* Place startup code at the very beginning of the safe zone */
   .text :
   {
-    . = ALIGN(4);
-    KEEP(*(.vector_table)) /* Keep the vector table if you define one */
+    . = ALIGN(8);
+    KEEP(*(.init))   /* Defines the entry point location */
+    KEEP(*(.text.startup))
     *(.text .text.*)
+    . = ALIGN(8);
+  } > DRAM
+
+  .rodata :
+  {
+    . = ALIGN(8);
     *(.rodata .rodata.*)
-    . = ALIGN(4);
-  } > RAM
+    *(.srodata .srodata.*)
+    . = ALIGN(8);
+  } > DRAM
 
   .data :
   {
-    . = ALIGN(16);
+    . = ALIGN(8);
+    PROVIDE( __global_pointer$ = . + 0x800 );
     _sdata = .;
     *(.data .data.*)
     *(.sdata .sdata.*)
-    . = ALIGN(16);
+    . = ALIGN(8);
     _edata = .;
-  } > RAM
+  } > DRAM
 
   .bss :
   {
-    . = ALIGN(16);
+    . = ALIGN(8);
     _sbss = .;
     *(.bss .bss.*)
-    *(.sbss .sbss.*)
     *(COMMON)
-    . = ALIGN(16);
+    . = ALIGN(8);
     _ebss = .;
-  } > RAM
+  } > DRAM
 
-  /* Stack and Heap definitions */
+  /* * Stack Definitions
+   * We place the stack at the very end of the 128MB block 
+   * so it grows downwards without hitting our code.
+   */
   . = ALIGN(16);
-  _end = .;
-  PROVIDE( _heap_start = . );
+  _stack_top = ORIGIN(DRAM) + LENGTH(DRAM);
   
-  /* Place stack at end of RAM */
-  PROVIDE( _stack_top = ORIGIN(RAM) + LENGTH(RAM) );
+  /* For compatibility with some legacy assembly that looks for __kernel_stack */
+  PROVIDE(__kernel_stack = _stack_top); 
 }
