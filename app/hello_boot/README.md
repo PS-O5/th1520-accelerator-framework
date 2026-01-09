@@ -1,5 +1,5 @@
 ## Hardware Section
-Once you have sucessfully generated the binary hello_boot.bin file by running "make" in parent directory then we are
+Once you have sucessfully generated the binary hello_boot.bin file by running "make" in main directory then we are
 ready to move ahead.  
 You can use any FTDI chip for UART monitoring. CAUTION: Set the jumper to 3.3V or you will end up frying the SoC!  
 Do the following connections, always GND first!
