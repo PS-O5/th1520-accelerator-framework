@@ -40,7 +40,7 @@ When at the U-boot prompt, press <kbd>Ctrl</kbd> + <kbd>C</kbd> to interrupt. It
 Execute ```loady 0x200000``` , this will start the ymodem protocol to transfer the file directly to the TH1520 at address
 0x200000  
 The Serial Monitor will send ```C C C``` at regular interval, this is normal and expected.  
-Now press <kbd>Ctrt</kbd>+<kbd>A</kbd> <kbd>S</kbd> -> ymodem then navigate to "hello_boot.bin" and send it to the TH1520.  
+Now press <kbd>Ctrt</kbd>+<kbd>A</kbd> <kbd>S</kbd> -> ```ymodem``` then navigate to "hello_boot.bin" and send it to the TH1520.  
 Execute ```go 0x200000```  
   
 ### DONE!!  
