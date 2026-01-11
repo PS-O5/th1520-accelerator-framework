@@ -257,7 +257,6 @@ void uart_puts(const char *s) {
             ck_uart_putc(&g_console_uart, '\r');
         }
 
-        // Use your existing function!
         ck_uart_putc(&g_console_uart, (uint8_t)*s);
 
         s++;

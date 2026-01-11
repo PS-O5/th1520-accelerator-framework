@@ -3,35 +3,35 @@
 .type _start, @function
 
 _start:
-    /* --------------------------------------------------------------------
-       Supervisor Mode Setup (Booted from U-Boot)
-       -------------------------------------------------------------------- */
-
-    /* 1. Disable Interrupts (sie) */
+    /* 1. Disable Interrupts */
     csrw sie, zero
 
-    /* 2. Clear sstatus and Disable Vector Unit for safety 
-       VS bits are [24:23]. 00 = Off, 01 = Initial, 11 = Dirty
-       We clear everything to be safe. */
-    csrw sstatus, zero
+    /* 2. Setup sstatus (Status Register) */
+    /* FS (Float Status)  is bits [14:13] - Always enable FPU (0x00006000)
+       VS (Vector Status) is bits [24:23] - Only enable if requested
+    */
+    
+    /* Start with FPU enabled (Value: 0x00006000) */
+    li t0, 0x00006000 
 
-    /* 3. Initialize Global Pointer (gp)
-       The linker uses this for relaxation optimization */
+#ifdef ENABLE_VECTORS
+    /* OR in the Vector Status bits (Value: 0x01800000) */
+    li t1, 0x01800000
+    or t0, t0, t1
+#endif
+
+    csrs sstatus, t0
+
+    /* 3. Initialize Global Pointer */
     .option push
     .option norelax
     la gp, __global_pointer$
     .option pop
 
-    /* 4. Initialize Stack Pointer (sp) 
-       _stack_top is defined in linker.ld */
+    /* 4. Initialize Stack Pointer */
     la sp, _stack_top
 
-    /* 5. Setup Trap Vector (stvec)
-       Point to a default hang loop for now to catch early crashes */
-    la t0, early_trap_handler
-    csrw stvec, t0
-
-    /* 6. Clear BSS (Zero out uninitialized globals) */
+    /* 5. Clear BSS */
     la t0, _sbss
     la t1, _ebss
     bge t0, t1, bss_done
@@ -41,14 +41,8 @@ bss_loop:
     blt t0, t1, bss_loop
 bss_done:
 
-    /* 7. Jump to C main */
+    /* 6. Jump to Main */
     call main
 
-    /* 8. Safety Hang */
 hang:
     j hang
-
-/* Early Trap Handler: If we crash before FreeRTOS, we loop here */
-.align 4
-early_trap_handler:
-    j early_trap_handler

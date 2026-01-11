@@ -5,7 +5,7 @@ MEMORY
 {
   /* * TH1520 RAM Layout for U-Boot Payloads:
    * 0x00000000 - 0x001FFFFF : OpenSBI (DO NOT TOUCH)
-   * 0x00200000 - ...        : Your Application (Safe Zone)
+   * 0x00200000 - ...        : Safe Zone
    */
   DRAM (xrw) : ORIGIN = 0x00200000, LENGTH = 128M 
 }
