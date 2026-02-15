@@ -12,7 +12,7 @@ _start:
        We set BOTH Machine (mtvec) and Supervisor (stvec) vectors 
        to ensure we catch the trap regardless of privilege mode.
     */
-    la t0, trap_handler
+    //la t0, trap_handler
     csrw mtvec, t0
     csrw stvec, t0
 
